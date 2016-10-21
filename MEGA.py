@@ -237,6 +237,17 @@ class mega2:
                 self.file_names.append(file)
             else:
                 print('cannot add file to open mega as file already exists!')
+    def adddata(self,fdat):##allows for adding data as 'file' manually from within a program without crating a file to read [file,[data]]
+        if self.isloaded() == True:
+            if fdat[0]  not in self.file_names:
+                dat = fdat[1]
+                for x in range(len(dat)):
+                    dat[x] = dat[x].strip('\n')##writefile replaces this stripped newlinechar
+                    self.data_main.append(dat[x])
+                self.offsets.append(len(dat))
+                self.file_names.append(fdat[0])
+            else:
+                print('cannot add fake file to open mega as file already exists!')
             
     def replacefile(self,file):##finds file data,recalculates offsets then appends data
         if self.isloaded() == True:
@@ -245,32 +256,35 @@ class mega2:
             self.addfile(file)
     
     def removefile(self,file):##remove file from mega
-        if self.isloaded() == True and (file in self.file_names):##if loaded and exists
-            offsetstart = 0
-            offset = int(self.offsets[self.file_names.index(file)])##finds offset data of file
-            file_data = []##for holding new data
-            offset_data = []##for holding offset data
-            for x in range(0,self.file_names.index(file)):#self.file_names.index(file)):##add offsests to get starting line
-                offsetstart +=int(self.offsets[x])
-                #offset +=1
-    ##        for x in range(offsetstart,(offsetstart+offset)):#appends data to buffer for returning(optimise by returning entries by number form the main instead)
-    ##            file_data.append(self.data_main[x])
-    ##            #print(offset,'.',offsetstart)
-                
-            for x1 in range(0,offsetstart):##copies first half
-                file_data.append(self.data_main[x1])
-            for x2 in range((offsetstart+offset),len(self.data_main)):
-                file_data.append(self.data_main[x2])
-                
-            for y1 in range(len(self.file_names)):
-                if y1 == self.file_names.index(file):##ignore entry associated with filename
-                    pass
-                else:
-                    offset_data.append(self.offsets[y1])
-            ##update values
-            self.offsets = offset_data
-            self.data_main = file_data
-            self.file_names.remove(file)
+        print(self.isloaded(),',',file in self.file_names)
+        if self.isloaded() == True:
+            if file in self.file_names:##if loaded and exists
+                print('is')
+                offsetstart = 0
+                offset = int(self.offsets[self.file_names.index(file)])##finds offset data of file
+                file_data = []##for holding new data
+                offset_data = []##for holding offset data
+                for x in range(0,self.file_names.index(file)):#self.file_names.index(file)):##add offsests to get starting line
+                    offsetstart +=int(self.offsets[x])
+                    #offset +=1
+        ##        for x in range(offsetstart,(offsetstart+offset)):#appends data to buffer for returning(optimise by returning entries by number form the main instead)
+        ##            file_data.append(self.data_main[x])
+        ##            #print(offset,'.',offsetstart)
+                    
+                for x1 in range(0,offsetstart):##copies first half
+                    file_data.append(self.data_main[x1])
+                for x2 in range((offsetstart+offset),len(self.data_main)):
+                    file_data.append(self.data_main[x2])
+                    
+                for y1 in range(len(self.file_names)):
+                    if y1 == self.file_names.index(file):##ignore entry associated with filename
+                        pass
+                    else:
+                        offset_data.append(self.offsets[y1])
+                ##update values
+                self.offsets = offset_data
+                self.data_main = file_data
+                self.file_names.remove(file)
     
     def peek(self):##returns filenames from megafile
         if self.isloaded() == True:
@@ -332,5 +346,5 @@ class mega2:
         else:
             print('cannot add file to open mega as file already exists!')
     
-main = mega2('test')
-main.load('testing')
+#main = mega2('test')
+#main.load('testing')
