@@ -15,7 +15,9 @@ class mega2:
             self.load(MEGA)
         else:
             print('empty mega obj created!')
-            self.writefile(MEGA,[',,',',,',''])#'New_MegaFile'
+            self.writefile(MEGA,['1,,','test_entry,,','123456789'])#'New_MegaFile'
+            self.load(MEGA)
+            self.removefile('test_entry')
     ##usual
     def readfile(self,fname):
         print('reading file:'+str(fname))
@@ -110,10 +112,7 @@ class mega2:
         file_names = []
         data_main = []##clear main
         offsettotal = 0
-        if Mname[-5:].upper() == '.MEGA':
-                pass
-        else:
-            Mname+='.MEGA'
+        Mname = self.megafilename_process(Mname)
         dat = self.readfile(str(Mname))#+'.MEGA')
         os.mkdir(str(Mname[:-5])+'_MEGA')
         os.chdir(str(Mname[:-5])+'_MEGA')
@@ -160,10 +159,7 @@ class mega2:
         file_names = []
         data_main = []
         megacache = []##will optimise later
-        if Mname[-5:].upper() == '.MEGA':
-            pass
-        else:
-            Mname+='.MEGA'
+        Mname = self.megafilename_process(Mname)
 
         file_names = files
         for file in files:##each file
@@ -186,116 +182,129 @@ class mega2:
     #peek()
     #peeks the file contents of the megafile loaded as vdir
     def load(self,Mega):##loads new megafile into object
+        Mega = self.megafilename_process(Mega)
+        if os.path.isfile(Mega):
+            self.offsets = []
+            self.file_names = []
+            self.data_main = []##clear main
+            self.LOADED = True
+            self.MEGANAME = Mega
+    ##        if Mega[-5:].upper() == '.MEGA':
+    ##            dat = self.readfile(Mega)
+    ##        else:
+    ##            
+            dat = self.readfile(str(Mega))#+'.MEGA')
+            self.offsets = self.csv2array(dat[0].strip('\n'))
+            self.file_names = self.csv2array(dat[1].strip('\n'))
+            self.data_main = []##clear main
+            for x in range(2,len(dat)):
+                self.data_main.append(dat[x].strip('\n'))
+            
+    def reload(self):#reloads current megafile data
+        if self.isloaded()== True:
+            self.load(self.MEGANAME)
+        
+    def save(self):##saves current object 2disk as megafile(loaded name)
+        if self.isloaded() == True:
+            dat = [str(self.array2csv(self.offsets)),str(self.array2csv(self.file_names))]##edit remived newline
+            for x in self.data_main:
+                dat.append(str(x))#+'\n')##dont need added by save(\n)
+            print('writing\n',dat)
+            self.writefile(self.MEGANAME,dat)
+            
+    def saveas(self,Mname):##saveas newmega
+        if self.isloaded() == True:
+            Mname = self.megafilename_process(Mname)
+            dat = [str(self.array2csv(self.offsets))+'\n',str(self.array2csv(self.file_names))+'\n']
+            for x in self.data_main:
+                dat.append(str(x)+'\n')
+            self.writefile(Mname,dat)
+        
+    def saveas_reload(self,Mname):##saveas then reload as the new mega
+        if self.isloaded() == True:
+            self.saveas(Mname)
+            self.MEGANAME = Mname
+            self.load(Mname)
+        
+    def addfile(self,file):##add new file to mega
+        if self.isloaded() == True:
+            if file  not in self.file_names:
+                dat = self.readfile(file)
+                for x in range(len(dat)):
+                    dat[x] = dat[x].strip('\n')##writefile replaces this stripped newlinechar
+                    self.data_main.append(dat[x])
+                self.offsets.append(len(dat))
+                self.file_names.append(file)
+            else:
+                print('cannot add file to open mega as file already exists!')
+            
+    def replacefile(self,file):##finds file data,recalculates offsets then appends data
+        if self.isloaded() == True:
+            self.removefile(file)##moved code to removefile
+            ##adding file data to file(could use add?)
+            self.addfile(file)
+    
+    def removefile(self,file):##remove file from mega
+        if self.isloaded() == True and (file in self.file_names):##if loaded and exists
+            offsetstart = 0
+            offset = int(self.offsets[self.file_names.index(file)])##finds offset data of file
+            file_data = []##for holding new data
+            offset_data = []##for holding offset data
+            for x in range(0,self.file_names.index(file)):#self.file_names.index(file)):##add offsests to get starting line
+                offsetstart +=int(self.offsets[x])
+                #offset +=1
+    ##        for x in range(offsetstart,(offsetstart+offset)):#appends data to buffer for returning(optimise by returning entries by number form the main instead)
+    ##            file_data.append(self.data_main[x])
+    ##            #print(offset,'.',offsetstart)
+                
+            for x1 in range(0,offsetstart):##copies first half
+                file_data.append(self.data_main[x1])
+            for x2 in range((offsetstart+offset),len(self.data_main)):
+                file_data.append(self.data_main[x2])
+                
+            for y1 in range(len(self.file_names)):
+                if y1 == self.file_names.index(file):##ignore entry associated with filename
+                    pass
+                else:
+                    offset_data.append(self.offsets[y1])
+            ##update values
+            self.offsets = offset_data
+            self.data_main = file_data
+            self.file_names.remove(file)
+    
+    def peek(self):##returns filenames from megafile
+        if self.isloaded() == True:
+            return self.file_names
+    
+    def fetch(self,file):##fetches data from internal megadata object
+        if self.isloaded() == True:
+            offsetstart = 0
+            offset = int(self.offsets[self.file_names.index(file)])##finds offset data of file
+            file_data = []
+            for x in range(0,self.file_names.index(file)):#self.file_names.index(file)):##add offsests to get starting line
+                offsetstart +=int(self.offsets[x])
+                #offset +=1
+            for x in range(offsetstart,(offsetstart+offset)):#appends data to buffer for returning(optimise by returning entries by number form the main instead)
+                file_data.append(self.data_main[x])
+                #print(offset,'.',offsetstart)
+            return file_data
+        
+    def close(self):##wipes object
         self.offsets = []
         self.file_names = []
         self.data_main = []##clear main
-        if Mega[-5:].upper() == '.MEGA':
-                pass
-        else:
-            Mega+='.MEGA'
-        self.MEGANAME = Mega
-##        if Mega[-5:].upper() == '.MEGA':
-##            dat = self.readfile(Mega)
-##        else:
-##            
-        dat = self.readfile(str(Mega))#+'.MEGA')
-        self.offsets = self.csv2array(dat[0].strip('\n'))
-        self.file_names = self.csv2array(dat[1].strip('\n'))
-        self.data_main = []##clear main
-        for x in range(2,len(dat)):
-            self.data_main.append(dat[x].strip('\n'))
-    def reload(self):#reloads current megafile data
-        self.load(self.MEGANAME)
+        self.LOADED = False
         
-    def save(self):##saves current object 2disk as megafile(loaded name)
-        dat = [str(self.array2csv(self.offsets)),str(self.array2csv(self.file_names))]##edit remived newline
-        for x in self.data_main:
-            dat.append(str(x))#+'\n')##dont need added by save(\n)
-        print('writing\n',dat)
-        self.writefile(self.MEGANAME,dat)
-    def saveas(self,Mname):##saveas newmega
-        if Mname[-5:].upper() == '.MEGA':
+    
+    def isloaded(self):
+        return self.LOADED
+    def megafilename_process(self,Mfile):##processes megfile name and changes if nessecary
+        if Mfile[-5:].upper() == '.MEGA':
             pass
         else:
-            Mname+='.MEGA'
-        dat = [str(self.array2csv(self.offsets))+'\n',str(self.array2csv(self.file_names))+'\n']
-        for x in self.data_main:
-            dat.append(str(x)+'\n')
-        self.writefile(Mname,dat)
+            Mfile+='.MEGA'
+        return Mfile
         
-    def saveas_reload(self,Mname):##saveas then reload as the new mega
-        self.saveas(Mname)
-        self.MEGANAME = Mname
-        self.load(Mname)
-        
-    def addfile(self,file):##add new file to mega
-        if file  not in self.file_names:
-            dat = self.readfile(file)
-            for x in range(len(dat)):
-                dat[x] = dat[x].strip('\n')##writefile replaces this stripped newlinechar
-                self.data_main.append(dat[x])
-            self.offsets.append(len(dat))
-            self.file_names.append(file)
-        else:
-            print('cannot add file to open mega as file already exists!')
-            
-    def replacefile(self,file):##finds file data,recalculates offsets then appends data
-
-        self.removefile(file)##moved code to removefile
-        ##adding file data to file(could use add?)
-        self.addfile(file)
-    
-    def removefile(self,file):##remove file from mega
-        ##        offset = 0
-##        offsetstart = 0
-##        offsetflag = 0
-##        dat_new = []
-##        for x in range(len(self.file_names)):
-##            if self.file_names[x] == file:
-##                offset = int(self.offsets[x])##gets offset of file
-##                offsetflag = x
-##        for x in range(0,offsetflag):
-##            offsetstart +=int(self.offsets[x])
-        offsetstart = 0
-        offset = int(self.offsets[self.file_names.index(file)])##finds offset data of file
-        file_data = []##for holding new data
-        offset_data = []##for holding offset data
-        for x in range(0,self.file_names.index(file)):#self.file_names.index(file)):##add offsests to get starting line
-            offsetstart +=int(self.offsets[x])
-            #offset +=1
-##        for x in range(offsetstart,(offsetstart+offset)):#appends data to buffer for returning(optimise by returning entries by number form the main instead)
-##            file_data.append(self.data_main[x])
-##            #print(offset,'.',offsetstart)
-            
-        for x1 in range(0,offsetstart):##copies first half
-            file_data.append(self.data_main[x1])
-        for x2 in range((offsetstart+offset),len(self.data_main)):
-            file_data.append(self.data_main[x2])
-            
-        for y1 in range(len(self.file_names)):
-            if y1 == self.file_names.index(file):##ignore entry associated with filename
-                pass
-            else:
-                offset_data.append(self.offsets[y1])
-        ##update values
-        self.offsets = offset_data
-        self.data_main = file_data
-        self.file_names.remove(file)
-    
-    def peek(self):##returns filenames from megafile
-        return self.file_names
-    
-    def fetch(self,file):##fetches data from internal megadata object
-        offsetstart = 0
-        offset = int(self.offsets[self.file_names.index(file)])##finds offset data of file
-        file_data = []
-        for x in range(0,self.file_names.index(file)):#self.file_names.index(file)):##add offsests to get starting line
-            offsetstart +=int(self.offsets[x])
-            #offset +=1
-        for x in range(offsetstart,(offsetstart+offset)):#appends data to buffer for returning(optimise by returning entries by number form the main instead)
-            file_data.append(self.data_main[x])
-            #print(offset,'.',offsetstart)
-        return file_data
         
         
 
