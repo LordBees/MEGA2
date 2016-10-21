@@ -184,6 +184,7 @@ class mega2:
     def load(self,Mega):##loads new megafile into object
         Mega = self.megafilename_process(Mega)
         if os.path.isfile(Mega):
+            
             self.offsets = []
             self.file_names = []
             self.data_main = []##clear main
@@ -199,7 +200,11 @@ class mega2:
             self.data_main = []##clear main
             for x in range(2,len(dat)):
                 self.data_main.append(dat[x].strip('\n'))
-            
+            ##check for the test entry if there is only one entry that is the test entry
+            if str(len(self.peek())) == '1':
+                if self.fetch('test_entry') == ['123456789']:
+                    print('Test entry detected, removing..')
+                    self.removefile('test_entry')
     def reload(self):#reloads current megafile data
         if self.isloaded()== True:
             self.load(self.MEGANAME)
@@ -312,6 +317,7 @@ class mega2:
     
     def isloaded(self):
         return self.LOADED
+    
     def megafilename_process(self,Mfile):##processes megfile name and changes if nessecary
         if Mfile[-5:].upper() == '.MEGA':
             pass
