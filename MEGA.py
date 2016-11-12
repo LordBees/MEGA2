@@ -202,9 +202,10 @@ class mega2:
                 self.data_main.append(dat[x].strip('\n'))
             ##check for the test entry if there is only one entry that is the test entry
             if str(len(self.peek())) == '1':
-                if self.fetch('test_entry') == ['123456789']:
-                    print('Test entry detected, removing..')
-                    self.removefile('test_entry')
+                if 'test_entry' in self.peek():
+                    if self.fetch('test_entry') == ['123456789']:
+                        print('Test entry detected, removing..')
+                        self.removefile('test_entry')
     def reload(self):#reloads current megafile data
         if self.isloaded()== True:
             self.load(self.MEGANAME)
@@ -259,6 +260,11 @@ class mega2:
             self.removefile(file)##moved code to removefile
             ##adding file data to file(could use add?)
             self.addfile(file)
+    def replacedata(self,fdat):##finds file data,recalculates offsets then appends data
+        if self.isloaded() == True:
+            self.removefile(fdat[0])##moved code to removefile
+            ##adding file data to file(could use add?)
+            self.adddata(fdat[0],fdat[1])
     
     def removefile(self,file):##remove file from mega
         print(self.isloaded(),',',file in self.file_names)
@@ -313,6 +319,11 @@ class mega2:
         self.file_names = []
         self.data_main = []##clear main
         self.LOADED = False
+        
+    def clear(self):##clears object data
+        self.offsets = []
+        self.file_names = []
+        self.data_main = []##clear main
         
     
     def isloaded(self):
